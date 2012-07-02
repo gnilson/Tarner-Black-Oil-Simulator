@@ -1,8 +1,11 @@
-from pylab import *
-from GAS import *
-from OIL import *
-from WATER import *
-from ROCKPROPS import *
+import matplotlib.pyplot as plt
+import GAS
+import OIL
+import WATER
+import ROCKPROPS
+
+
+from numpy import *
 from PARAMETERS import *
 
 pressures = []
@@ -33,7 +36,7 @@ data = {"Pressure":array(pressures),
 p = pi
 cer = (cw * swi + cf)/(1-swi)
 boi = boi * 5.615 #scf/stb
-data["GORest"][0] = rsi = Rso(p, tres, pb, api, SGgas)
+data["GORest"][0] = rsi = OIL.Rso(p, tres, pb, api, SGgas)
 
 
 for i in range(1, len(pressures)):
@@ -41,14 +44,14 @@ for i in range(1, len(pressures)):
     p = data["Pressure"][i]
     deltap = pi - p
     gor = data["GORest"][i-1] #new GOR guess
-    rso = Rso(p, tres, pb, api, SGgas) #Solution GOR
-    bo = Bo(p , tres, pb, rso, SGgas, api) * 5.615 #scf/stb
-    bg = Bg(p, tres, SGgas) #rcuft/SCF
+    rso = OIL.Rso(p, tres, pb, api, SGgas) #Solution GOR
+    bo = OIL.Bo(p , tres, pb, rso, SGgas, api) * 5.615 #scf/stb
+    bg = GAS.Bg(p, tres, SGgas) #rcuft/SCF
     et = bo - boi + bg * (rsi - rso) + boi * cer * deltap
     phiN = (bo - bg * rso) / et
     phiG = bg / et
-    mug = Visg(p, tres, SGgas)
-    muo = Visoil(p, tres, pb, SGgas, api)
+    mug = GAS.Visg(p, tres, SGgas)
+    muo = OIL.Visoil(p, tres, pb, SGgas, api)
 
     while(error>tolerance):
         gorave = (gor + data["GORest"][i-1])/2
@@ -66,19 +69,19 @@ for i in range(1, len(pressures)):
         #else:
         sg = 1 - so - sw
 
-        krg = Krg(sg, swi, sgc, sor, krg_sor)
-        kro = Kro(so, swi, sor)
+        krg = ROCKPROPS.Krg(sg, swi, sgc, sor, krg_sor)
+        kro = ROCKPROPS.Kro(so, swi, sor)
+
         if (krg < 0):
            krg = 0
-        
         if (p<pi and p>pb):
             gorcalc = rsi
         elif (p<pb and sg<=sgc):
             gorcalc = rso
         else:
             gorcalc = rso + krg * muo \
-                *(Bo(p, tres, pb, rso, SGgas, api)/5.615) / (kro \
-                * mug * Bg(p, tres, SGgas))
+                *(OIL.Bo(p, tres, pb, rso, SGgas, api)/5.615) / (kro \
+                * mug * GAS.Bg(p, tres, SGgas))
         
         error = abs(gorcalc - gor)/gorcalc
         gor = gorcalc
@@ -99,65 +102,64 @@ for i in range(1, len(pressures)):
     data["Muo"][i] = muo
     data["Mug"][i] = mug
 
-figure(1, facecolor='w')
+fig1 = plt.figure(1, facecolor='w')
 
-subplot(221)
-plot(data["Pressure"], data["GORest"])
-bottom, top = xlim()
-xlim(top,bottom)
-xlabel("Reservoir Pressure, psia")
-ylabel("Producing GOR, SCF/STB")
-grid(True)
+ax = fig1.add_subplot(221)
+ax.plot(data["Pressure"], data["GORest"])
+#bottom, top = plt.xlim()
+#plt.xlim(top,bottom)
+ax.set_xlabel("Reservoir Pressure, psia")
+ax.set_ylabel("Producing GOR, SCF/STB")
+ax.grid(True)
 
-subplot(222)
-plot(data["Np"][1:], data["Pressure"][1:])
-xlabel("Cumulative Oil Production, STB")
-ylabel("Reservoir Pressure")
-grid(True)
+ax = fig1.add_subplot(222)
+ax.plot(data["Np"][1:], data["Pressure"][1:])
+ax.set_xlabel("Cumulative Oil Production, STB")
+ax.set_ylabel("Reservoir Pressure")
+ax.grid(True)
 
-subplot(223)
-plot(data["Pressure"][1:], data["PhiG"][1:])
-bottom, top = xlim()
-xlim(top,bottom)
-xlabel("Reservoir Pressure, psia")
-ylabel("Gas Saturation, fraction")
-grid(True)
+ax = fig1.add_subplot(223)
+ax.plot(data["Pressure"][1:], data["PhiG"][1:])
+#bottom, top = xlim()
+#ax.xlim(top,bottom)
+ax.set_xlabel("Reservoir Pressure, psia")
+ax.set_ylabel("Gas Saturation, fraction")
+ax.grid(True)
 
-subplot(224)
-plot(data["Pressure"][1:], data["Muo"][1:])
+ax = fig1.add_subplot(224)
+ax.plot(data["Pressure"][1:], data["Muo"][1:])
 #bottom, top = xlim()
 #xlim(top,bottom)
-xlabel("Reservoir Pressure, psia")
-ylabel("Oil Viscosity, Cp")
-grid(True)
+ax.set_xlabel("Reservoir Pressure, psia")
+ax.set_ylabel("Oil Viscosity, Cp")
+ax.grid(True)
 
-figure(2, facecolor='w')
+fig2 = plt.figure(2, facecolor='w')
 
-subplot(221)
-plot(data["Pressure"][1:], data["Mug"][1:])
-xlabel("Reservoir Pressure, psia")
-ylabel("Gas Viscosity, Cp")
-grid(True)
+ax = fig2.add_subplot(221)
+ax.plot(data["Pressure"][1:], data["Mug"][1:])
+ax.set_xlabel("Reservoir Pressure, psia")
+ax.set_ylabel("Gas Viscosity, Cp")
+ax.grid(True)
 
-subplot(222)
-plot(data["Pressure"][1:], data["Muo"][1:])
-xlabel("Reservoir Pressure, psia")
-ylabel("Oil Viscosity, Cp")
-grid(True)
+ax = fig2.add_subplot(222)
+ax.plot(data["Pressure"][1:], data["Muo"][1:])
+ax.set_xlabel("Reservoir Pressure, psia")
+ax.set_ylabel("Oil Viscosity, Cp")
+ax.grid(True)
 
-subplot(223)
-plot(data["Pressure"][1:], data["GORsol"][1:])
-xlabel("Reservoir Pressure, psia")
-ylabel("Solution Gas Oil Ratio, SCF/STB")
-grid(True)
+ax = fig2.add_subplot(223)
+ax.plot(data["Pressure"][1:], data["GORsol"][1:])
+ax.set_xlabel("Reservoir Pressure, psia")
+ax.set_ylabel("Solution Gas Oil Ratio, SCF/STB")
+ax.grid(True)
+
+ax = fig2.add_subplot(224)
+ax.plot(1-data["Sg"], data["krg"]/data["kro"])
+ax.set_xlabel("Liquid Saturation, Fraction")
+ax.set_ylabel("krg/kro")
+ax.grid(True)
 
 
-subplot(224)
-plot(1-data["Sg"], data["krg"]/data["kro"])
-xlabel("Liquid Saturation, Fraction")
-ylabel("krg/kro")
-grid(True)
-
-
-show()
+plt.show()
 #print data["Muo"]
